@@ -29,26 +29,40 @@ class KAN(nn.Module):
             self.layer[i].update_grid_range(x)
             x = temp
             
-    def train(self, data_loader, optimizer, loss_func, epochs):
+    def train(self, data_loader, test_loader, optimizer, loss_func, epochs):
         size = len(data_loader.dataset)
         self.train()
+        train_losses = []
+        test_losses = []
         for t in range(epochs):
-            print(f"Epoch {t + 1}\n -------------------------------");
+            print(f"Epoch {t + 1}\n -------------------------------")
+            epoch_train_losses = []
             for batch, (X, y) in enumerate(data_loader):
                 self.update_grid_from_sample(X)
                 predict = self.forward(X)
                 loss = loss_func(predict, y)
-                
+
                 loss.backward()
                 optimizer.step()
                 optimizer.zero_grad()
-                
-                epochs_loss = loss.item();
+
+                epoch_train_losses.append(loss.item())
                 if batch % 30 == 0:
                     loss, current = loss.item(), (batch + 1) * len(X)
-                    print(f"loss: {loss} [{current}/{size}]"); 
-    def test(self):
-        pass
+                    print(f"loss: {loss} [{current}/{size}]")
+            train_losses.append(sum(epoch_train_losses) / len(epoch_train_losses))
+            test_loss = self.test(test_loader, loss_func)
+            test_losses.append(test_loss)
+        return train_losses, test_losses
+
+    def test(self, data_loader, loss_func):
+        size = len(data_loader.dataset)
+        test_loss = 0
+        with torch.no_grad():
+            for X, y in data_loader:
+                predict = self.forward(X)
+                test_loss += loss_func(predict, y).item()
+        return test_loss / size
     
 #----------------------Test space------------------------#
 # a = KAN(width = [2, 5, 1])
