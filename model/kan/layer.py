@@ -1,11 +1,11 @@
 import torch
-import activations
 from torch import nn
-from activations import *
+#from .activations import *
+from .spline import *
 
 class KANLayer(nn.Module):
     def __init__(self, num_in_node, num_out_node, k = 3, G = 5, b = nn.SiLU(), default_grid_range = [-1, 1], device = "cpu") -> None:
-        super().__init__()
+        super(KANLayer, self).__init__()
         self.num_in_node = num_in_node
         self.num_out_node = num_out_node
         self.size = num_in_node * num_out_node
@@ -14,54 +14,70 @@ class KANLayer(nn.Module):
         self.G = G
         self.b = b
         self.default_grid_range = default_grid_range
+    
+        self.scale_b = nn.Parameter(torch.ones(self.size, 1), requires_grad = True)
+        
+        self.scale_spline = nn.Parameter(torch.ones(self.size, 1), requires_grad = True)
+        nn.init.xavier_uniform_(self.scale_spline)
+        
         # self.knots: (size, G + 1)
-        self.knots = torch.linspace(default_grid_range[0], default_grid_range[1], G + 1).repeat(self.size, 1);
+        self.knots = nn.Parameter(torch.linspace(default_grid_range[0], default_grid_range[1], G + 1).unsqueeze(0).repeat(self.size, 1).to(device), requires_grad=False);
 
-        self.noise = torch.rand(self.size, G + 1)
+        self.noise = torch.rand(self.size, G + 1).to(device)
         # self.coef: (size, G + k)
-        self.coef = nn.Parameter(curve_to_coef(self.knots, self.noise, self.knots, k, device))
+        self.coef = nn.Parameter(curve_to_coef(self.knots.to(torch.double), self.noise.to(torch.double), self.knots.to(torch.double), k, device).to(torch.double), requires_grad = True)
         
         self.device = device
+        
     def forward(self, x):
         
         # x : (batch, num_in_node)
-        pre_acts = x.unsqueeze(2).repeat(1, 1, self.num_out_node).reshape(-1, self.size).T
+        # pre_acts : (size, batch)
+        pre_acts = x.unsqueeze(1).repeat(1, self.num_out_node, 1).reshape(-1, self.size).T
         # after here all is (, batch)
-        y = coef_to_curve(pre_acts, self.knots, self.coef, self.k, self.device)
+        y = coef_to_curve(x_eval=pre_acts, grid=self.knots, coef=self.coef, k=self.k, device=self.device).to(torch.double)
         post_splines = y
-        y = self.b(pre_acts) + y
+        #print(self.scale_b)
+        y = self.scale_b.repeat(1, x.shape[0]) * self.b(pre_acts) + self.scale_spline.repeat(1, x.shape[0]) * y
+        
         post_acts = y
-        # y : (num_out_node, batch)
-        y = torch.sum(y.reshape(self.num_out_node, -1, self.num_in_node), dim = 2)
-        return y.T, pre_acts.T, post_splines.T, post_acts.T
+        y = y.T.reshape(-1, self.num_out_node, self.num_in_node)
+        # y : (batch, num_out_node)
+        y = torch.sum(y, dim = 2)
+        return y, pre_acts.T, post_splines.T, post_acts.T
         
     def extend_grid(self, coarser_layer, x):
         """
             This function is used in case we want to change recent gird to new grid
         """
         
-        x_val = x.unsqueeze(2).repeat(1, 1, self.num_out_node).reshape(-1, self.size).T
-        new_grids_generator = KANLayer(1, self.size, k = self.k, G = coarser_layer.G);
+        x_eval = x.unsqueeze(2).repeat(1, self.num_out_node, 1).reshape(-1, self.size).T
+        new_grids_generator = KANLayer(num_in_node=1, num_out_node=self.size, k = 1, G = coarser_layer.G);
         # new_grids_generator.knots : (size, batch) (size, coarser_layer.G + 1)
-        new_grids_generator.coef.data = curve_to_coef(new_grids_generator.knots, coarser_layer.knots, new_grids_generator.knots, self.k, self.device)
-        y_val = coef_to_curve(x_val, coarser_layer.knots, coarser_layer.coef, coarser_layer.k, self.device);
+        
+        new_grids_generator.coef.data = curve_to_coef(x_eval=new_grids_generator.knots.to(torch.double), y_eval=coarser_layer.knots.to(torch.double), grid=new_grids_generator.knots.to(torch.double), k = 1, device=self.device).to(torch.double)
+        y_eval = coef_to_curve(x_eval=x_eval, grid=coarser_layer.knots, coef=coarser_layer.coef, k=coarser_layer.k, device=self.device).to(torch.double);
         input_grid = torch.linspace(-1, 1, self.G + 1).to(self.device)
-        self.knots = new_grids_generator(input_grid.unsqueeze(dim = 1))[0].T
-        self.coef.data = curve_to_coef(x_val, y_val, self.knots, self.k, self.device)
+        
+        #grid_range = coarser_layer.knots.data[:, [0, -1]]
+        #self.knots.data = torch.cat([grid_range[:, [0]] - 0.05 + i * (grid_range[:, [-1]] - grid_range[:, [0]] + 0.05) / self.G for i in range(self.G + 1)], dim = 1).to(self.device)
+        
+        self.knots.data = torch.sort(new_grids_generator(input_grid.unsqueeze(dim = 1))[0].T, dim = 1)[0]
+        self.coef.data = curve_to_coef(x_eval=x_eval.to(torch.double), y_eval=y_eval.to(torch.double), grid=self.knots.to(torch.double), k=self.k, device=self.device).to(torch.double)
         
     def update_grid_range(self, x):
         """
             This function is used in case we want to update the grid range according to sample
         """
         # x: (batch, num_in_node)
-        x_eval = x.unsqueeze(2).repeat(1, 1, self.num_out_node).reshape(-1, self.size).T
-        y_eval = coef_to_curve(x_eval, self.knots, self.coef, self.k, self.device)
-        # x: (size, batch)
-        x_pos = torch.sort(x_eval, dim = 1)[0]
+        x_eval = x.unsqueeze(2).repeat(1, self.num_out_node, 1).reshape(-1, self.size).T
+        y_eval = coef_to_curve(x_eval=x_eval, grid=self.knots, coef=self.coef, k=self.k, device=self.device).to(torch.double)
+        # x_pos: (size, batch)
+        x_pos = torch.sort(x_eval, dim = 1)[0].to(self.device)
         grid_range = x_pos[:, [0, -1]]
-        self.knots = torch.cat([grid_range[:, [0]] - 0.01 + i * (grid_range[:, [-1]] - grid_range[:, [0]] + 0.01) / self.G for i in range(self.G + 1)], dim = 1)
-        self.coef.data = curve_to_coef(x_eval, y_eval, self.knots, self.k, self.device)
-        
+        #grid_range = torch.cat([torch.minimum(self.knots[:, [0]], x_pos[:, [0]]), torch.maximum(self.knots[:, [-1]], x_pos[:, [-1]])], dim = 1)
+        self.knots.data = torch.cat([grid_range[:, [0]] - 0.01 + i * (grid_range[:, [-1]] - grid_range[:, [0]] + 0.01) / self.G for i in range(self.G + 1)], dim = 1).to(self.device)
+        self.coef.data = curve_to_coef(x_eval=x_eval.to(torch.double), y_eval=y_eval.to(torch.double), grid=self.knots.to(torch.double), k=self.k, device=self.device).to(torch.double)
 #----------------------Test space---------------------#
 # a = KANLayer(3, 5)
 # b = KANLayer(3, 5, G = 10)

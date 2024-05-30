@@ -27,7 +27,8 @@ def calculate_B_spline_basis_functions(x, grid, k):
     return b # (num splines, num knots + k - 1, num samples)
 
 
-def coef_to_curve(x, coef, grid, k):
+def coef_to_curve(x_eval, coef, grid, k, device):
+    x = x_eval.to(torch.double)
     """
     Args:
         x: torch.Tensor (num splines, num samples)
@@ -41,7 +42,9 @@ def coef_to_curve(x, coef, grid, k):
     y = torch.einsum('ijk,ij->ik', b_splines, coef)
     return y
 
-def curve_to_coef(x, y, grid, k):
+def curve_to_coef(x_eval, y_eval, grid, k, device):
+    x = x_eval.to(torch.double)
+    y = y_eval.to(torch.double)
     """
     Args:       
         x: torch.Tensor (num splines, num samples)
