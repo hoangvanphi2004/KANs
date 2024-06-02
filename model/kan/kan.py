@@ -2,9 +2,10 @@ import torch
 from .layer import KANLayer
 from .utils import *
 from torch import nn
-from .spline import *
+from .activations import *
 import numpy as np
 import matplotlib.pyplot as plt
+from tqdm import tqdm
 
 class KAN(nn.Module):
     def __init__(self, G = 5, k = 3, width = [2, 5, 1], b = nn.SiLU(), default_gird_range = [-1, 1], device = "cpu") -> None:
@@ -27,34 +28,32 @@ class KAN(nn.Module):
     def forward(self, x):
         self.acts_value = []
         self.acts_value.append(x)
-        self.pre_acts = []
-        self.post_acts = []
-        self.splines = []
         for i in range(len(self.layer)):
             output = self.layer[i](x) 
-            x = output[0]
+            x = output[0] + self.bias[i].weight
             #x += self.bias[i].weight;
             self.acts_value.append(x)
-            self.pre_acts.append(output[1])
-            self.post_acts.append(output[3])
-            self.splines.append(output[2])
         return x
     
-    def initial_grid_from_other_model(self, model, x):
-        model(x)
-        self.forward(x)
+    def initial_grid_from_other_model(self, model):
+        # model(x)
+        # self.forward(x)
         for i in range(len(self.layer)):
-            self.layer[i].extend_grid(model.layer[i], self.acts_value[i])
-        for i in range(len(self.layer)): 
-            print(model.pre_acts[i].T, model.splines[i].T, model.layer[i].knots, self.layer[i].knots)
-            print(model.pre_acts[i].T.shape, model.splines[i].T.shape, self.layer[i].knots.shape)
-            print(self.layer[i].coef.data)
-            self.layer[i].coef.data = curve_to_coef(x_eval = model.pre_acts[i].T, y_eval = model.splines[i].T, grid=self.layer[i].knots, k=self.k, device=self.device)
+            coarser_grid = model.layer[i].knots.data
+            x_range = coarser_grid[:, [0, -1]]
+            x = torch.cat([(x_range[:, [0]] + i * (x_range[:, [-1]] - x_range[:, [0]]) / (self.G * 10)) for i in range(self.G * 10)], dim = 1).to(self.device)
+            self.layer[i].extend_grid(model.layer[i], x)
+        # for i in range(len(self.layer)): 
+            # print(model.pre_acts[i].T, model.splines[i].T, model.layer[i].knots, self.layer[i].knots)
+            # print(model.pre_acts[i].T.shape, model.splines[i].T.shape, self.layer[i].knots.shape)
+            # print(self.layer[i].coef.data)
+            # self.layer[i].coef.data = curve_to_coef(x_eval = model.pre_acts[i].T, y_eval = model.splines[i].T, grid=self.layer[i].knots, k=self.k, device=self.device)
             self.layer[i].b = model.layer[i].b
             self.layer[i].scale_b = model.layer[i].scale_b
             self.layer[i].scale_spline = model.layer[i].scale_spline
-            print(self.layer[i].coef.data)
-            print(" stop please T^T ")
+        self.bias = model.bias
+            # print(self.layer[i].coef.data)
+            # print(" stop please T^T ")
     def update_grid_from_sample(self, x):
         self.forward(x)
         for i in range(len(self.layer)):
@@ -75,42 +74,59 @@ class KAN(nn.Module):
                     y_j = y[:, j].flatten().detach().cpu().numpy()
                     plt.subplot(w, h, i * h + j + 1)
                     plt.plot(x_j, y_j)
+                    plt.xlim(-1, 1)
+                    plt.ylim(-2, 2)
 
         plt.show()        
             
-    def train_model(self, data_loader, optimizer, loss_func, is_LBFGS = False):
-        def closure():
-            loss.backward()
-            optimizer.zero_grad()
-            return loss
+    def train_model(self, data_loader, test_dataloader, optimizer, loss_func, epochs = 20, stop_grid = 2, is_LBFGS = False):
         size = len(data_loader.dataset)
         self.train()
-        first_x = 0;
-        first = True
-        for batch, (X, y) in enumerate(data_loader):
-            
-            if first:
-                first_x = X
-                first = False
+        train_loss_list = []
+        test_loss_list = []
+        train_loss = 0
+        cnt = 0;
+        for t in range(epochs):
+            print(f"Epoch {t + 1}\n -------------------------------");
+            first = True
+            pbar = tqdm(data_loader, desc='description', ncols=100)
+            for batch, (X, y) in enumerate(pbar):
+                if first:
+                    first = False
+                    
+                if t < stop_grid:
+                    self.update_grid_from_sample(X)
+                    
+                predict = self.forward(X).reshape(-1)
+                #print(predict, y, "------")
+                loss = loss_func(predict, y)
                 
-            predict = self.forward(X).reshape(-1)
-            #print(predict, y, "------")
-            loss = loss_func(predict, y)
-            
-            if is_LBFGS:
-                optimizer.step(closure)
-            else:
-                loss.backward()
-                optimizer.step()
-                optimizer.zero_grad()
-            
-            epochs_loss = loss.item();
-            if batch % 30 == 0:
-                #print([par for par in self.parameters()])
-                loss, current = loss.item(), (batch + 1) * len(X)
-                print(f"loss: {loss} [{current}/{size}]"); 
+                def closure():
+                    loss.backward()
+                    optimizer.zero_grad()
+                    return loss
                 
-        return first_x
+                if is_LBFGS:
+                    optimizer.step(closure)
+                else:
+                    loss.backward()
+                    optimizer.step()
+                    optimizer.zero_grad()
+                
+                train_loss = loss.item();
+                cnt += 1;
+                if batch % 30 == 0:
+                    #print([par for par in self.parameters()])
+                    loss, current = loss.item(), (batch + 1) * len(X)
+                    pbar.set_description(f"loss: {loss} [{current}/{size}]"); 
+                    
+            test_loss = self.test_model(test_dataloader, loss_func = loss_func);    
+            train_loss = train_loss
+            
+            train_loss_list.append(train_loss)
+            test_loss_list.append(test_loss)
+        
+        return train_loss_list, test_loss_list
     def test_model(self, data_loader, loss_func):
         self.eval()
         epochs_loss = 0
@@ -123,7 +139,8 @@ class KAN(nn.Module):
             cnt += 1;
         
         print(f"test_loss: {epochs_loss / cnt}")
-            
+        
+        return epochs_loss / cnt
         
     
 #----------------------Test space------------------------#

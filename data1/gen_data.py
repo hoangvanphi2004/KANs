@@ -1,14 +1,14 @@
 # tao data tu function
-import numpy as np
+import torch 
 
 def test_func(x, y):
-    return np.exp(np.sin(np.pi * x) + y * y)
+    return torch.exp(torch.sin(torch.pi * x) + y ** 2)
 
-def from_function_to_dataset(function, data_range = [-2, 2], data_dim = 1, num_of_data = 10000):
+def from_function_to_dataset(function, data_range = [-1, 1], data_dim = 1, num_of_data = 2000):
     """
         Remember: function always calculated with batch !!!
     """    
-    x = np.random.rand(num_of_data, data_dim) * (data_range[1] - data_range[0]) + data_range[0]
+    x = torch.rand(num_of_data, data_dim) * (data_range[1] - data_range[0]) + data_range[0]
     y = test_func(*x.T)
     return x, y
 

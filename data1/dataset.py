@@ -16,6 +16,6 @@ class Data(DataLoader):
         return x, y
     
 data = Data(data_raw[0], data_raw[1])
-train_data, test_data = random_split(data, [0.8, 0.2])
-test_dataloader = DataLoader(test_data, batch_size = 32, shuffle = True);
-train_dataloader = DataLoader(train_data, batch_size = 32, shuffle = True);
+train_data, test_data = random_split(data, [0.5, 0.5])
+test_dataloader = DataLoader(test_data, batch_size = 64, shuffle = True);
+train_dataloader = DataLoader(train_data, batch_size = 64, shuffle = True);
