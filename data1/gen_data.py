@@ -10,7 +10,7 @@ def from_function_to_dataset(function, data_range = [-1, 1], data_dim = 1, num_o
     """    
     x = torch.rand(num_of_data, data_dim) * (data_range[1] - data_range[0]) + data_range[0]
     y = test_func(*x.T)
-    return x, y
+    return x.to(torch.float), y.to(torch.float)
 
 data_raw = from_function_to_dataset(function = test_func, data_dim = 2)
 print(data_raw)
