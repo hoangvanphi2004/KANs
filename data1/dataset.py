@@ -17,5 +17,5 @@ class Data(DataLoader):
     
 data = Data(data_raw[0], data_raw[1])
 train_data, test_data = random_split(data, [0.5, 0.5])
-test_dataloader = DataLoader(test_data, batch_size = 64, shuffle = True);
-train_dataloader = DataLoader(train_data, batch_size = 64, shuffle = True);
+test_dataloader = DataLoader(test_data, batch_size = 1000, shuffle = True);
+train_dataloader = DataLoader(train_data, batch_size = 1000, shuffle = True);
