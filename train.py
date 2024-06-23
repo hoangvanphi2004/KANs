@@ -27,7 +27,7 @@ import math
 # print("shallower")
 # temp_model.test_model(test_dataloader, loss_func=loss_func)
 
-#-----------------------increasing grid----------------------------------#
+#--------------------------increasing grid----------------------------------#
 grid_finer = [5, 10, 20, 50, 100, 200, 500]
 
 first = 1
