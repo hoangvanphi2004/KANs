@@ -60,7 +60,7 @@ class KAN(nn.Module):
             h = max(self.width[i] * self.width[i + 1], h)
         
         for i in range(w):
-            x = torch.linspace(-3, 3, 100).unsqueeze(1).repeat(1, self.layer[i].num_in_node).to(torch.double)
+            x = torch.linspace(-3, 3, 100).unsqueeze(1).repeat(1, self.layer[i].num_in_node)
             y = self.layer[i](x)[2]
             for j in range(h):
                 x_j = torch.linspace(-3, 3, 100).detach().cpu().numpy()

@@ -1,6 +1,7 @@
 from data1.dataset import *
 from model.kan.kan import *
 import torch
+import math
 #----------------------------- 2 model -----------------------------------#
 # test_kan_model = KAN(G = 3, k = 3, width = [2, 1, 1])
 # #optim = torch.optim.LBFGS(test_kan_model.parameters(), lr = 1e-3, history_size= 10, tolerance_grad=1e-32, line_search_fn="strong_wolfe", tolerance_change=1e-32)
@@ -31,7 +32,7 @@ grid_finer = [5, 10, 20, 50, 100, 200, 500]
 
 first = 1
 old_model = None
-learning_rate = 5e-3
+learning_rate = 5e-2
 train_plot = []
 test_plot = []
 
@@ -46,9 +47,9 @@ for grid in grid_finer:
     if(old_model != None):
         new_model.initial_grid_from_other_model(old_model)
         new_model.plot()
-    optim = torch.optim.Adam(new_model.parameters(), lr = learning_rate)
+    #optim = torch.optim.Adam(new_model.parameters(), lr = learning_rate)
     optim = torch.optim.LBFGS(new_model.parameters(), lr = 1, history_size=10, line_search_fn="strong_wolfe", tolerance_grad=1e-32, tolerance_change=1e-32)
-    loss_func = RMSE
+    loss_func = torch.nn.MSELoss()
     train_loss_list, test_loss_list = new_model.train_model(train_data, test_data, optimizer = optim, loss_func = loss_func, epochs=20, stop_grid=5, is_LBFGS = True)
     
     train_plot += train_loss_list
@@ -58,7 +59,9 @@ for grid in grid_finer:
         first = 0
     new_model.plot()
     old_model = new_model
-    learning_rate /= 3
+    
+    learning_rate /= (3 + math.log10(grid) / 2)
+    
     print("#-------------------Evaluate-------------------#")
     print(f"train_loss: {train_loss_list[-1]} test_loss: {test_loss_list[-1]}")
     
