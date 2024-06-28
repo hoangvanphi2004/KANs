@@ -57,10 +57,10 @@ class KANLayer(nn.Module):
         y_eval = coef_to_curve(x_eval=x_eval, grid=coarser_layer.knots, coef=coarser_layer.coef, k=coarser_layer.k, device=self.device);
         # input_grid = torch.linspace(-1, 1, self.G + 1).to(self.device)
         
-        grid_range = coarser_layer.knots.data[:, [0, -1]]
+        #grid_range = coarser_layer.knots.data[:, [0, -1]]
         
-        self.knots.data = torch.cat([grid_range[:, [0]] + i * (grid_range[:, [-1]] - grid_range[:, [0]]) / self.G for i in range(self.G + 1)], dim = 1).to(self.device)
-        
+        #self.knots.data = torch.cat([grid_range[:, [0]] + i * (grid_range[:, [-1]] - grid_range[:, [0]]) / self.G for i in range(self.G + 1)], dim = 1).to(self.device)
+
         #self.update_grid_range(x_eval)
         # print(grid_range)
         # print(coarser_layer.knots.data)
@@ -68,6 +68,14 @@ class KANLayer(nn.Module):
         # print("->end of grid")
         
         #self.knots.data = torch.sort(new_grids_generator(input_grid.unsqueeze(dim = 1))[0].T, dim = 1)[0]
+
+        x_pos = torch.sort(x_eval, dim = 1)[0].to(self.device)
+        grid_range = torch.cat([x_pos[:, [0]], x_pos[:, [-1]]], dim = 1)
+        ids = [int(x_eval.shape[1] / self.G * i) for i in range(self.G)] + [-1]
+        grid_adapt = x_pos[:, ids]
+        grid_uniform = torch.cat([grid_range[:, [0]] - 0.01 + i * (grid_range[:, [-1]] - grid_range[:, [0]] + 0.02) / self.G for i in range(self.G + 1)], dim = 1).to(self.device)
+        self.knots.data = grid_adapt * 0.98 + grid_uniform * 0.02
+
         self.coef.data = curve_to_coef(x_eval=x_eval, y_eval=y_eval, grid=self.knots, k=self.k, device=self.device)
         # print("->end of coef")
         
@@ -80,10 +88,11 @@ class KANLayer(nn.Module):
         y_eval = coef_to_curve(x_eval=x_eval, grid=self.knots, coef=self.coef, k=self.k, device=self.device)
         # x_pos: (size, batch)
         x_pos = torch.sort(x_eval, dim = 1)[0].to(self.device)
-        #grid_range = x_pos[:, [0, -1]]
         grid_range = torch.cat([x_pos[:, [0]], x_pos[:, [-1]]], dim = 1)
-        #grid_range = torch.cat([torch.minimum(self.knots[:, [0]], x_pos[:, [0]]), torch.maximum(self.knots[:, [-1]], x_pos[:, [-1]])], dim = 1)
-        self.knots.data = torch.cat([grid_range[:, [0]] - 0.01 + i * (grid_range[:, [-1]] - grid_range[:, [0]] + 0.02) / self.G for i in range(self.G + 1)], dim = 1).to(self.device)
+        ids = [int(x_eval.shape[1] / self.G * i) for i in range(self.G)] + [-1]
+        grid_adapt = x_pos[:, ids]
+        grid_uniform = torch.cat([grid_range[:, [0]] - 0.01 + i * (grid_range[:, [-1]] - grid_range[:, [0]] + 0.02) / self.G for i in range(self.G + 1)], dim = 1).to(self.device)
+        self.knots.data = grid_adapt * 0.98 + grid_uniform * 0.02
         self.coef.data = curve_to_coef(x_eval=x_eval, y_eval=y_eval, grid=self.knots, k=self.k, device=self.device)
 #----------------------Test space---------------------#
 # a = KANLayer(3, 5)

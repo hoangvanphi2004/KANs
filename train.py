@@ -45,15 +45,15 @@ test_data[1] = test_dataloader.dataset[:][1]
 for grid in grid_finer:
     new_model = KAN(G = grid, k = 3, width = [2, 1, 1])
     if(old_model != None):
-        new_model.initial_grid_from_other_model(old_model)
+        new_model.initial_grid_from_other_model(old_model, train_data[0])
         new_model.plot()
     #optim = torch.optim.Adam(new_model.parameters(), lr = learning_rate)
     optim = torch.optim.LBFGS(new_model.parameters(), lr = 1, history_size=10, line_search_fn="strong_wolfe", tolerance_grad=1e-32, tolerance_change=1e-32)
     loss_func = torch.nn.MSELoss()
-    train_loss_list, test_loss_list = new_model.train_model(train_data, test_data, optimizer = optim, loss_func = loss_func, epochs=20, stop_grid=5, is_LBFGS = True)
+    train_loss_list, test_loss_list = new_model.train_model(train_data, test_data, optimizer = optim, loss_func = loss_func, epochs=100, stop_grid=5, is_LBFGS = True)
     
-    train_plot += train_loss_list
-    test_plot += test_loss_list
+    train_plot += [math.sqrt(loss) for loss in train_loss_list]
+    test_plot += [math.sqrt(loss) for loss in test_loss_list]
     
     if first == 1:
         first = 0

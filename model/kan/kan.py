@@ -35,14 +35,14 @@ class KAN(nn.Module):
             self.acts_value.append(x)
         return x
     
-    def initial_grid_from_other_model(self, model):
-        # model(x)
+    def initial_grid_from_other_model(self, model, x):
+        model(x)
         # self.forward(x)
         for i in range(len(self.layer)):
             coarser_grid = model.layer[i].knots.data
-            x_range = coarser_grid[:, [0, -1]]
-            x = torch.cat([(x_range[:, [0]] + i * (x_range[:, [-1]] - x_range[:, [0]]) / (self.G * 10)) for i in range(self.G * 10)], dim = 1).to(self.device)
-            self.layer[i].extend_grid(model.layer[i], x)
+            #x_range = coarser_grid[:, [0, -1]]
+            #x = torch.cat([(x_range[:, [0]] + i * (x_range[:, [-1]] - x_range[:, [0]]) / (self.G * 10)) for i in range(self.G * 10)], dim = 1).to(self.device)
+            self.layer[i].extend_grid(model.layer[i], model.acts_value[i])
         for i in range(len(self.layer)): 
             self.layer[i].b = model.layer[i].b
             self.layer[i].scale_b = model.layer[i].scale_b
