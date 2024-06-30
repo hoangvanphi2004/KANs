@@ -9,7 +9,7 @@ def from_function_to_dataset(function, data_range = [-1, 1], data_dim = 1, num_o
         Remember: function always calculated with batch !!!
     """    
     x = torch.rand(num_of_data, data_dim) * (data_range[1] - data_range[0]) + data_range[0]
-    y = test_func(*x.T) + torch.rand(1)[0] - 0.5
+    y = test_func(*x.T) + (torch.rand(1)[0] - 0.5) / 1e7
     return x, y
 
 data_raw = from_function_to_dataset(function = test_func, data_dim = 2)

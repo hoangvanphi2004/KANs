@@ -25,6 +25,8 @@ class KANLayer(nn.Module):
         # self.coef: (size, G + k)
         self.coef = nn.Parameter(curve_to_coef(self.knots, self.noise, self.knots, k, device), requires_grad = True)
         
+        self.mask = torch.ones(size=(self.size, ))
+
         self.device = device
         
     def forward(self, x):
@@ -34,14 +36,15 @@ class KANLayer(nn.Module):
         pre_acts = x.unsqueeze(1).repeat(1, self.num_out_node, 1).reshape(-1, self.size).T
         # after here all is (, batch)
         y = coef_to_curve(x_eval=pre_acts, grid=self.knots, coef=self.coef, k=self.k, device=self.device)
+        y = y * self.mask.unsqueeze(1).repeat(1, y.shape[1])
         post_splines = y
         #print(self.scale_b)
         y = self.scale_b.repeat(1, x.shape[0]) * self.b(pre_acts) + self.scale_spline.repeat(1, x.shape[0]) * y
         
         post_acts = y
-        y = y.T.reshape(-1, self.num_out_node, self.num_in_node)
+        y = y.reshape(self.num_in_node, self.num_out_node, -1).permute(2, 0, 1)
         # y : (batch, num_out_node)
-        y = torch.sum(y, dim = 2)
+        y = torch.sum(y, dim = 1)
         return y, pre_acts.T, post_splines.T, post_acts.T
         
     def extend_grid(self, coarser_layer, x):
@@ -94,6 +97,8 @@ class KANLayer(nn.Module):
         grid_uniform = torch.cat([grid_range[:, [0]] - 0.01 + i * (grid_range[:, [-1]] - grid_range[:, [0]] + 0.02) / self.G for i in range(self.G + 1)], dim = 1).to(self.device)
         self.knots.data = grid_adapt * 0.98 + grid_uniform * 0.02
         self.coef.data = curve_to_coef(x_eval=x_eval, y_eval=y_eval, grid=self.knots, k=self.k, device=self.device)
+
+    
 #----------------------Test space---------------------#
 # a = KANLayer(3, 5)
 # b = KANLayer(3, 5, G = 10)

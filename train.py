@@ -28,7 +28,7 @@ import math
 # temp_model.test_model(test_dataloader, loss_func=loss_func)
 
 #----------------------------increasing grid----------------------------------#
-grid_finer = [5, 10, 20, 50, 100, 200, 500]
+grid_finer = [5, 10, 20, 50, 100, 200, 500, 1000]
 
 first = 1
 old_model = None
@@ -70,5 +70,4 @@ plt.plot([i for i in range(len(test_plot))], test_plot, label="test_loss")
 plt.yscale('log', base=10)
 plt.legend()
 plt.show();
-
 
