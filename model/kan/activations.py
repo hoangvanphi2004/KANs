@@ -28,7 +28,7 @@ def calculate_B_spline_basis_functions(x, grid, k):
 
 
 def coef_to_curve(x_eval, coef, grid, k, device):
-    x = x_eval.to(torch.double)
+    x = x_eval
     """
     Args:
         x: torch.Tensor (num splines, num samples)
@@ -43,8 +43,8 @@ def coef_to_curve(x_eval, coef, grid, k, device):
     return y
 
 def curve_to_coef(x_eval, y_eval, grid, k, device):
-    x = x_eval.to(torch.double)
-    y = y_eval.to(torch.double)
+    x = x_eval
+    y = y_eval
     """
     Args:       
         x: torch.Tensor (num splines, num samples)
