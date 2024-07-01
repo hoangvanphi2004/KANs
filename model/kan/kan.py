@@ -6,6 +6,7 @@ from .activations import *
 import numpy as np
 import matplotlib.pyplot as plt
 from tqdm import tqdm
+from .sparsification_reg import LossWithSparsificationRegularization
 
 class KAN(nn.Module):
     def __init__(self, G = 5, k = 3, width = [2, 5, 1], b = nn.SiLU(), default_gird_range = [-1, 1], device = "cpu") -> None:
@@ -95,7 +96,9 @@ class KAN(nn.Module):
             recent_mask = (mask[l].unsqueeze(1).repeat(1, mask[l + 1].shape[0]) * mask[l + 1].unsqueeze(0).repeat(mask[l].shape[0], 1)).reshape(-1)
             self.layer[l].mask = self.layer[l].mask * recent_mask
 
-    def train_model(self, train_data, test_data, optimizer, loss_func, epochs = 20, stop_grid = 2, is_LBFGS = False):
+    def train_model(self, train_data, test_data, optimizer, loss_func, epochs = 20, stop_grid = 2, is_LBFGS = False, 
+                     lamb=0., lamb_l1=1, lamb_entropy=2, lamb_l1_coef=0., lamb_l1_coef_diff=0.):
+        loss_with_reg = LossWithSparsificationRegularization(model=self, loss_func=loss_func, lamb=lamb, lamb_l1=lamb_l1, lamb_entropy=lamb_entropy, lamb_l1_coef=lamb_l1_coef, lamb_l1_coef_diff=lamb_l1_coef_diff)
         self.train()
         train_loss_list = []
         test_loss_list = []
@@ -105,6 +108,7 @@ class KAN(nn.Module):
         for t in pbar:
             X = train_data[0]
             y = train_data[1]
+
             if t < stop_grid:
                 self.update_grid_from_sample(X)
                 
@@ -114,9 +118,10 @@ class KAN(nn.Module):
                 optimizer.zero_grad()
                 predict = self.forward(X).reshape(-1)
                 #print(predict, y, "------")
-                loss = loss_func(predict, y)
-                loss.backward()
-                
+                loss, reg = loss_with_reg(predict, y)
+                objective = loss + reg
+                objective.backward()
+
                 return loss
             
             if is_LBFGS:
@@ -124,14 +129,15 @@ class KAN(nn.Module):
             else:
                 predict = self.forward(X).reshape(-1)
                 #print(predict, y, "------")
-                loss = loss_func(predict, y)
-                loss.backward()
+                loss, reg = loss_with_reg(predict, y)
+                objective = loss + reg
+                objective.backward()
                 optimizer.step()
                 optimizer.zero_grad()
-
+            
             train_loss = loss.item();
             cnt += 1;
-            pbar.set_description(f"loss: {loss}"); 
+            pbar.set_description(f"loss: {loss}");
                     
             test_loss = self.test_model(test_data, loss_func = loss_func);    
             train_loss = train_loss
