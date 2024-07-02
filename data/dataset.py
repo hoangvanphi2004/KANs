@@ -1,6 +1,6 @@
 # tao dataset
 import matplotlib.pyplot as plt
-from torch.utils.data import Dataset
+from torch.utils.data import Dataset, DataLoader
 from .gen_data import generate_data
 
 class FunctionDataset(Dataset):
@@ -27,9 +27,12 @@ class FunctionDataset(Dataset):
             plt.title('Data samples')
             plt.show()
         else:
-            print('Cannot plot data samples with dimension greater than 2')
+            print('Cannot plot data samples with dimension greater than 1')
     def __len__(self):
         return len(self.x)
 
     def __getitem__(self, idx):
         return self.x[idx], self.y[idx]
+    
+    def get_dataloader(self, batch_size, shuffle=True):
+        return DataLoader(self, batch_size=batch_size, shuffle=shuffle)

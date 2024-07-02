@@ -21,7 +21,6 @@ def generate_data(func, num_samples, ranges, noise_std):
         x.append(torch.rand(num_samples) * (b - a) + a)
     x = torch.stack(x, dim=1)
     data = func(x)
-
     # Add noise to the data samples
     noise = torch.normal(0, noise_std, size=data.shape)
     data_with_noise = data + noise
