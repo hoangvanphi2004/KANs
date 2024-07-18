@@ -14,9 +14,9 @@ class KANLayer(nn.Module):
         self.b = b
         self.default_grid_range = default_grid_range
     
-        self.scale_b = nn.Parameter(torch.ones(self.size, 1), requires_grad = True)
+        self.scale_b = nn.Parameter(torch.ones(self.size, 1, device=device), requires_grad = True)
         
-        self.scale_spline = nn.Parameter(torch.ones(self.size, 1), requires_grad = True)
+        self.scale_spline = nn.Parameter(torch.ones(self.size, 1, device=device), requires_grad = True)
         
         # self.knots: (size, G + 1)
         self.knots = nn.Parameter(torch.linspace(default_grid_range[0], default_grid_range[1], G + 1).unsqueeze(0).repeat(self.size, 1).to(device), requires_grad=False);
@@ -25,7 +25,7 @@ class KANLayer(nn.Module):
         # self.coef: (size, G + k)
         self.coef = nn.Parameter(curve_to_coef(self.knots, self.noise, self.knots, k, device), requires_grad = True)
         
-        self.mask = torch.ones(size=(self.size, ))
+        self.mask = torch.ones(size=(self.size, ), device=device)
 
         self.device = device
         

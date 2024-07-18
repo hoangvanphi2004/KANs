@@ -66,7 +66,7 @@ class KAN(nn.Module):
             h = max(self.width[i] * self.width[i + 1], h)
         
         for i in range(w):
-            x = torch.linspace(-3, 3, 100).unsqueeze(1).repeat(1, self.layer[i].num_in_node)
+            x = torch.linspace(-3, 3, 100).unsqueeze(1).repeat(1, self.layer[i].num_in_node).to(self.device)
             y = self.layer[i](x)[2]
             for j in range(h):
                 if j < y.shape[1]:
@@ -80,15 +80,15 @@ class KAN(nn.Module):
         plt.show()        
     
     def pruning(self, threshold = 5e-2):
-        mask = [torch.ones(self.width[0], )]
+        mask = [torch.ones((self.width[0], ), device=self.device)]
         for l in range(len(self.acts_scale) - 1):
             #print(self.acts_scale[l])
             input_mask = torch.max(self.acts_scale[l], dim = 0)[0] > threshold
             output_mask = torch.max(self.acts_scale[l + 1], dim = 1)[0] > threshold
             overall_mask = input_mask * output_mask
-            mask.append(overall_mask.float())
+            mask.append(overall_mask.float().to(self.device))
         #print(self.acts_scale[-1])
-        mask.append(torch.ones(self.width[-1], ))
+        mask.append(torch.ones((self.width[-1], ), device=self.device))
         
         #print(mask)
 
