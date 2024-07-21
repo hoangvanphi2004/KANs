@@ -1,0 +1,4 @@
+defaults:
+  - model: kan_cf
+  - trainer: trainer_cf
+  - data_module: data_cf

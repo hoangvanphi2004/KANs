@@ -1,0 +1,2 @@
+- model=kan_cf
+- model.optimizer.is_lbfgs=True

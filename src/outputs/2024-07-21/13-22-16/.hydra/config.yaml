@@ -1,0 +1,34 @@
+model:
+  model:
+    _target_: src.model.kan.kan.KAN
+    G: 5
+    k: 3
+    width:
+    - 2
+    - 5
+    - 1
+    default_grid_range:
+    - -1
+    - 1
+    b: SiLU
+  optimizer:
+    is_lbfgs: true
+    lr: 1
+  loss:
+    loss_func: MSE
+    lamb: 0.0
+    lamb_l1: 1
+    lamb_entropy: 2
+    lamb_l1_coef: 0.0
+    lamb_l1_coef_diff: 0.0
+trainer:
+  _target_: pytorch_lightning.Trainer
+  max_epochs: 20
+  accelerator: cpu
+data_module:
+  _target_: src.data.dataset.FunctionDatamodule
+  train_samples: 1000
+  val_samples: 200
+  test_samples: 200
+  batch_size: 64
+  noise_std: 0.0
