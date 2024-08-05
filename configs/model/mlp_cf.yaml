@@ -1,0 +1,8 @@
+model:
+  _target_: src.model.mlp.mlp.MLP
+  width: [2, 100, 100, 100, 1]
+  activation_class: "ReLU" 
+
+optimizer:
+  is_lbfgs: False
+  lr: 1e-3

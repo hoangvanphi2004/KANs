@@ -1,0 +1,6 @@
+_target_: src.data.dataset.FunctionDatamodule
+train_samples: 1000
+val_samples: 200
+test_samples: 200
+batch_size: 64
+noise_std: 0.0
