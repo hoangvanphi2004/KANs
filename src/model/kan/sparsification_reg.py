@@ -1,9 +1,8 @@
 import torch
 import torch.nn as nn
 
-class LossWithSparsificationRegularization(nn.Module):
+class LossWithSparsificationRegularization():
     def __init__(self, model, loss_func, lamb=0., lamb_l1=1, lamb_entropy=10, lamb_l1_coef=0., lamb_l1_coef_diff=0.):
-        super().__init__()
         self.model = model
         self.loss_func = loss_func
         self.lamb = lamb
@@ -28,5 +27,7 @@ class LossWithSparsificationRegularization(nn.Module):
 
             reg += self.lamb_l1 * l1 + self.lamb_entropy * entropy + self.lamb_l1_coef * coef_l1 + self.lamb_l1_coef_diff * coef_diff_l1
         reg = self.lamb * reg
-        return l_pred, reg
+        return l_pred + reg
 
+    def __call__(self, y_pred, y_true):
+        return self.forward(y_pred, y_true)

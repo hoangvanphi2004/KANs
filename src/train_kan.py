@@ -19,9 +19,8 @@ def main(cfg:DictConfig):
     data_module: pl.LightningDataModule = hydra.utils.instantiate(cfg.data_module, func=test_func, range=sample_ranges)
 
     data_module.setup(stage='fit')
-    print(data_module.train.x.shape)
     # Set up the model
-    grid_finer = [3]
+    grid_finer = [5, 10, 20, 50, 100, 200, 500, 1000]
     old_model = None
     learning_rate = cfg.model.optimizer.lr
 
@@ -31,7 +30,6 @@ def main(cfg:DictConfig):
     # Train and test the model
     for grid in grid_finer:
         new_model: pl.LightningModule = hydra.utils.instantiate(cfg.model.model)
-        print(new_model)
         if(old_model != None):
             new_model.initial_grid_from_other_model(old_model, x=data_module.train.x)
         # new_model.configure_optimizers(cfg.model.optimizer)

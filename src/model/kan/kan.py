@@ -20,6 +20,16 @@ class KAN(pl.LightningModule):
         self.width = width
         self.layer = []
         self.bias = []
+
+        if b == 'SiLU':
+            b = nn.SiLU()
+        elif b == 'Sigmoid':
+            b = nn.Sigmoid()
+        elif b == 'Tanh':
+            b = nn.Tanh()
+        else:
+            raise ValueError(f"Activation function {b} not recognized.")
+
         for i in range(len(width) - 1):
             one_layer = KANLayer(width[i], width[i + 1], k = k, G = G, b = b, default_grid_range = default_grid_range)
             self.layer.append(one_layer)
@@ -27,7 +37,6 @@ class KAN(pl.LightningModule):
             self.bias.append(bias)
         self.layer = nn.ModuleList(self.layer)
         self.bias = nn.ModuleList(self.bias)
-        print('a')
 
     def forward(self, x):
         self.acts_value = []
@@ -59,7 +68,6 @@ class KAN(pl.LightningModule):
         self.bias = model.bias
         
     def update_grid_from_sample(self, x):
-        print('f')
         for i in range(len(self.layer)):
             self.forward(x)
             self.layer[i].update_grid_range(self.acts_value[i])
@@ -87,22 +95,18 @@ class KAN(pl.LightningModule):
     def pruning(self, threshold = 5e-2):
         mask = [torch.ones((self.width[0], ))]
         for l in range(len(self.acts_scale) - 1):
-            #print(self.acts_scale[l])
             input_mask = torch.max(self.acts_scale[l], dim = 0)[0] > threshold
             output_mask = torch.max(self.acts_scale[l + 1], dim = 1)[0] > threshold
             overall_mask = input_mask * output_mask
             mask.append(overall_mask.float())
-        #print(self.acts_scale[-1])
         mask.append(torch.ones((self.width[-1], )))
         
-        #print(mask)
 
         for l in range(len(self.layer)):
             recent_mask = (mask[l].unsqueeze(1).repeat(1, mask[l + 1].shape[0]) * mask[l + 1].unsqueeze(0).repeat(mask[l].shape[0], 1)).reshape(-1)
             self.layer[l].mask = self.layer[l].mask * recent_mask
 
     def training_step(self, batch, batch_idx, stop_grid = 2):
-        print('training_step')
         x, y = batch
         if self.current_epoch < stop_grid:
             self.update_grid_from_sample(x)
@@ -116,7 +120,6 @@ class KAN(pl.LightningModule):
         self.pruning()
 
     def validation_step(self, batch, batch_idx):
-        print('d')
         x, y = batch
         y_pred = self(x).reshape(-1)
         loss = self.loss_func(y_pred, y)
