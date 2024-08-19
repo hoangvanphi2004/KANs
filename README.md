@@ -16,9 +16,17 @@ We have implemented some basic structure of KANs some of it can be listed here:
 + Sparsification regularization.
 + Pruning.
 
-Also we have implemented basic MLP networks for comparison.
+Also we have implemented basic MLP network for comparison.
 ## 3. How to use this repo ?
-First you need to clone this repo. After that, depend on what you want to do, we have some feature:
+First you need to clone this repo. then run the following line:
+
+```bash
+pip install -r requirements.txt
+```
+
+If you want to use gpu, please following the instruction at https://pytorch.org/get-started/locally/ to install cuda
+
+After that, depend on what you want to do, we would have some features:
 ### a. KAN
 - To train a KAN model, run this command:
 
@@ -109,11 +117,11 @@ MLP_day_month_year_hour_minute_second.pth
   - You can change number of epoches each training time by changing the max_epoches parameter.
   - You can train using other accelerator (like gpu) by changing the accelerator to the device you want to use.
 
-- To create a complex model, you can train and tranfer the coarser model to more complex model, iteratively. To do this, you can go to configs\config.yaml to change the grid_sizes to list of gird you want to iteratively train and tranfer.
+- To create a complex model, you can train and tranfer coarser model to more complex model, iteratively. To do this, you can go to configs\config.yaml to change the grid_sizes parameter to list of girds you want to iteratively train and tranfer.
 
   ![image](https://github.com/user-attachments/assets/3b7d7ff5-a2a5-49b1-956f-671423af71a8)
 
-- And also we have some test files in folder to visualize b_splines, beizer spline, feel free to explore!
+- And also we have some test files in test folder to visualize b_splines, beizer spline, feel free to explore!
 
 ## 4. Contributor
 This research project have done by my team:
