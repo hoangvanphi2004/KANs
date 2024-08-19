@@ -5,6 +5,7 @@ import pytorch_lightning as pl
 import rootutils
 import hydra
 from omegaconf import DictConfig
+import datetime
 
 ROOTPATH = rootutils.setup_root(__file__, indicator=".project_root", pythonpath=True)
 CONFIG_PATH = str(ROOTPATH / "configs")
@@ -20,8 +21,9 @@ def main(cfg:DictConfig):
 
     data_module.setup(stage='fit')
     # Set up the model
-    grid_finer = [5, 10, 20, 50, 100, 200, 500, 1000]
+    grid_finer = cfg.grid_sizes
     old_model = None
+    new_model = None
     learning_rate = cfg.model.optimizer.lr
 
     # Set up the trainer
@@ -42,9 +44,13 @@ def main(cfg:DictConfig):
         print(f"Starting testing with grid size {grid}")
         trainer.test(new_model, datamodule=data_module)
         old_model = new_model
-        learning_rate /= (3 + math.log10(grid) / 2)
-
+        learning_rate /= (3 + math.log10(grid) / 2) 
+    
+    new_model.plot()
     loss_logger.plot_losses()
+    
+    torch.save(new_model.state_dict(), f"{ROOTPATH}\ckpt\KAN{datetime.datetime.now().strftime('_%d_%m_%Y_%H_%M_%S')}.pth")
+    
     return 
 
 if __name__ == '__main__':

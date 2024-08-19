@@ -2,6 +2,7 @@ import torch
 import pytorch_lightning as pl
 import rootutils
 import hydra
+import datetime
 from omegaconf import DictConfig
 
 ROOTPATH = rootutils.setup_root(__file__, indicator=".project_root", pythonpath=True)
@@ -25,9 +26,11 @@ def main(cfg:DictConfig):
     trainer.fit(model, data_module)
     
     print("Starting testing")
+    
     trainer.test(model, datamodule=data_module)
 
     loss_logger.plot_losses()
+    torch.save(model.state_dict(), f"{ROOTPATH}\ckpt\MLP{datetime.datetime.now().strftime('_%d_%m_%Y_%H_%M_%S')}.pth")
     return 
 
 if __name__ == '__main__':

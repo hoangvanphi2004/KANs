@@ -4,6 +4,16 @@ from .activations import *
 
 class KANLayer(nn.Module):
     def __init__(self, num_in_node, num_out_node, k = 3, G = 5, b = nn.SiLU(), default_grid_range = [-1, 1]) -> None:
+        """
+        Args:
+            num_in_node: number of input nodes
+            num_out_node: number of output nodes
+            G: number of grids of an activation 
+            k: the degree of an activation
+            width: number of nodes
+            b: basis function
+            default_grid_range: range that activations function work
+        """
         super(KANLayer, self).__init__()
         self.num_in_node = num_in_node
         self.num_out_node = num_out_node
@@ -29,7 +39,6 @@ class KANLayer(nn.Module):
 
         
     def forward(self, x):
-        
         # x : (batch, num_in_node)
         # pre_acts : (size, batch)
         pre_acts = x.unsqueeze(1).repeat(1, self.num_out_node, 1).reshape(-1, self.size).T
@@ -49,27 +58,25 @@ class KANLayer(nn.Module):
     def extend_grid(self, coarser_layer, x):
         """
             This function is used in case we want to change recent gird to new grid
+            Args: 
+                coarser_layer: a layer that have less girds
         """
         
         x_eval = x.unsqueeze(2).repeat(1, self.num_out_node, 1).reshape(-1, self.size).T
-        #new_grids_generator = KANLayer(num_in_node=1, num_out_node=self.size, k = 1, G = coarser_layer.G);
+        # new_grids_generator = KANLayer(num_in_node=1, num_out_node=self.size, k = 1, G = coarser_layer.G);
         # new_grids_generator.knots : (size, batch) (size, coarser_layer.G + 1)
         
         # new_grids_generator.coef.data = curve_to_coef(x_eval=new_grids_generator.knots, y_eval=coarser_layer.knots, grid=new_grids_generator.knots, k = 1, device=self.device)
         y_eval = coef_to_curve(x_eval=x_eval, grid=coarser_layer.knots, coef=coarser_layer.coef, k=coarser_layer.k)
         # input_grid = torch.linspace(-1, 1, self.G + 1).to(self.device)
         
-        #grid_range = coarser_layer.knots.data[:, [0, -1]]
+        # grid_range = coarser_layer.knots.data[:, [0, -1]]
         
-        #self.knots.data = torch.cat([grid_range[:, [0]] + i * (grid_range[:, [-1]] - grid_range[:, [0]]) / self.G for i in range(self.G + 1)], dim = 1).to(self.device)
+        # self.knots.data = torch.cat([grid_range[:, [0]] + i * (grid_range[:, [-1]] - grid_range[:, [0]]) / self.G for i in range(self.G + 1)], dim = 1).to(self.device)
 
-        #self.update_grid_range(x_eval)
-        # print(grid_range)
-        # print(coarser_layer.knots.data)
-        # print(x_eval.min(), x_eval.max(), "->\n" , y_eval.min(), y_eval.max(),"from\n", self.knots.data.min(), self.knots.data.max())
-        # print("->end of grid")
+        # self.update_grid_range(x_eval)
         
-        #self.knots.data = torch.sort(new_grids_generator(input_grid.unsqueeze(dim = 1))[0].T, dim = 1)[0]
+        # self.knots.data = torch.sort(new_grids_generator(input_grid.unsqueeze(dim = 1))[0].T, dim = 1)[0]
 
         x_pos = torch.sort(x_eval, dim = 1)[0]
         grid_range = torch.cat([x_pos[:, [0]], x_pos[:, [-1]]], dim = 1)
@@ -79,7 +86,6 @@ class KANLayer(nn.Module):
         self.knots.data = grid_adapt * 0.98 + grid_uniform * 0.02
 
         self.coef.data = curve_to_coef(x_eval=x_eval, y_eval=y_eval, grid=self.knots, k=self.k)
-        # print("->end of coef")
         
     def update_grid_range(self, x):
         """
@@ -108,6 +114,8 @@ class KANLayer(nn.Module):
 # print(b.knots.shape, b.coef.data.shape)
 # a.update_grid_range(x)
 # print(a.knots)
+
+
 #------------------------------------------------------#
 
 # init

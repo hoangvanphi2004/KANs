@@ -1,4 +1,3 @@
-# tao dataset
 import torch
 from .gen_data import *
 

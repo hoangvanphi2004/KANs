@@ -13,13 +13,23 @@ import matplotlib.pyplot as plt
 from src.model.kan.sparsification_reg import LossWithSparsificationRegularization
         
 class KAN(pl.LightningModule):
-    def __init__(self, G = 5, k = 3, width = [2, 5, 1], b = nn.SiLU(), default_grid_range = [-1, 1]) -> None:
+    def __init__(self, G = 5, k = 3, width = [2, 5, 1], b = nn.SiLU(), default_grid_range = [-1, 1], threshold = 5e-2) -> None:
+        """
+        Args:
+            G: number of grids of an activation 
+            k: the degree of an activation
+            width: number of nodes
+            b: basis function
+            default_grid_range: range that activations function work
+            threshold: threshold to prune
+        """
         super(KAN, self).__init__()
         self.G = G
         self.k = k
         self.width = width
         self.layer = []
         self.bias = []
+        self.threshold = threshold
 
         if b == 'SiLU':
             b = nn.SiLU()
@@ -53,6 +63,21 @@ class KAN(pl.LightningModule):
         return x
     
     def initial_grid_from_other_model(self, model, x):
+        """
+        This function transfer the old model to the new one (try to 
+        predict the same result when the same input is fed into model)
+        The transmission is conducted base on a sample data
+        Args:
+            model: other model
+            x: sample
+            
+        Example:
+            new_model: KAN
+            old_model: KAN
+            x: sample-dataset
+            ->
+            new_model.initial_grid_from_other_model(old_model, x = x)
+        """
         model(x)
         # self.forward(x)
         for i in range(len(self.layer)):
@@ -68,11 +93,25 @@ class KAN(pl.LightningModule):
         self.bias = model.bias
         
     def update_grid_from_sample(self, x):
+        """
+        We would like to change the the position of grids to adapt
+        to the distribution of sample, this function handle it
+        
+        Args:
+            x: sample
+        """
         for i in range(len(self.layer)):
             self.forward(x)
             self.layer[i].update_grid_range(self.acts_value[i])
     
     def plot(self):
+        """
+        This function plot all activation function of the model
+        Example:
+            new_model: KAN
+            ->
+            new_model.plot()
+        """
         w = len(self.layer)
         h = 0
         for i in range(len(self.width) - 1):
@@ -92,7 +131,11 @@ class KAN(pl.LightningModule):
 
         plt.show()        
     
-    def pruning(self, threshold = 5e-2):
+    def pruning(self):
+        """
+        This function in charge of pruning useless activation functions
+        """
+        threshold = self.threshold
         mask = [torch.ones((self.width[0], ))]
         for l in range(len(self.acts_scale) - 1):
             input_mask = torch.max(self.acts_scale[l], dim = 0)[0] > threshold
@@ -101,7 +144,6 @@ class KAN(pl.LightningModule):
             mask.append(overall_mask.float())
         mask.append(torch.ones((self.width[-1], )))
         
-
         for l in range(len(self.layer)):
             recent_mask = (mask[l].unsqueeze(1).repeat(1, mask[l + 1].shape[0]) * mask[l + 1].unsqueeze(0).repeat(mask[l].shape[0], 1)).reshape(-1)
             self.layer[l].mask = self.layer[l].mask * recent_mask
