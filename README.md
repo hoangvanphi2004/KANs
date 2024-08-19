@@ -8,7 +8,7 @@
 </div>
   
 ## 1. What happening here ?
-Kolmogorov–Arnold Networks have emerged and become a phenomenon recently. Therefore, to catch up with the world, me and my team have tried to dig deep into this special network to deep down understand it. Many things have been explained quite clear in the paper, but there were some points we need to dive to the repo of KindXiaoming (https://github.com/KindXiaoming/pykan) to truely understand it. To make sure we have understand those points, we have try to reimplement it. And this is how this repo come to the world.
+Kolmogorov–Arnold Networks have emerged and become a phenomenon recently. Therefore, to catch up with the world, me and my team have tried to dig deep into this special network to deep down understand it. Many things have been explained quite clear in the paper[^2], but there were some points we need to dive to the repo of KindXiaoming[^3] to truely understand it. To make sure we have understand those points, we have try to reimplement it. And this is how this repo come to the world.
 
 ## 2. What have we done ?
 We have implemented some basic structure of KANs some of it can be listed here:
@@ -47,9 +47,9 @@ KAN_day_month_year_hour_minute_second.pth
   | Optimizer | is_lbfgs | If this is True, KAN will train with lbfgs. If this is false, KAN will train with Adam |
   | Optimizer | lr | Learning rate |
   | Loss | loss_func | Loss function to calculate loss |
-  | Loss | lamb | λ in 2.20 in the paper [^1] |
-  | Loss | lamb_l1 | μ1 in 2.20 in the paper [^1] |
-  | Loss | lamb_entropy | μ2 in 2.20 in the paper [^1] |
+  | Loss | lamb | λ in 2.20[^1] in the paper[^2]  |
+  | Loss | lamb_l1 | μ1 in 2.20[^1] in the paper[^2]  |
+  | Loss | lamb_entropy | μ2 in 2.20[^1] in the paper[^2] |
 
 ### b. MLP
 - To train a MLP model, run this command:
@@ -122,7 +122,8 @@ This research project have done by my team:
 + [Hiếu Nguyễn](https://github.com/hieuhn09).
 ## 5. Reference
 [^1]: We refer to this formula to regularize: </br>![image](https://github.com/user-attachments/assets/f019b481-1da2-428b-ab6d-c35a2f74b680)
-
+[^2]: KAN: Kolmogorov–Arnold Networks paper: https://arxiv.org/html/2404.19756v4
+[^3]: https://github.com/KindXiaoming/pykan
 
 
   
