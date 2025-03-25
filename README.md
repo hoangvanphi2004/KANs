@@ -7,7 +7,7 @@
   
 </div>
   
-## 1. What happening here ?
+## 1. What is happening here ?
 Kolmogorov–Arnold Networks have emerged and become a phenomenon recently. Therefore, to catch up with the world, me and my team have tried to dig deep into this special network to deep down understand it. Many things have been explained quite clear in the paper[^2], but there were some points we need to dive to the repo of KindXiaoming[^3] to truely understand it. To make sure we have understand those points, we have try to reimplement it. And this is how this repo come to the world.
 
 ## 2. What have we done ?
